@@ -42,7 +42,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "modelversus"
+name = "modelversus-rust"
 version = "0.1.0"
 dependencies = [
  "pyo3",

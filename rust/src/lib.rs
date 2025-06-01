@@ -17,7 +17,7 @@ fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
 
 /// Dummy function for module scaffolding
 #[pymodule]
-fn _rustbindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn _rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
     Ok(())
 }

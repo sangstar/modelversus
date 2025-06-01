@@ -11,5 +11,8 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dynamic = ["version"]
+
 [tool.maturin]
-features = ["pyo3/extension-module"]
+python-source = "modelversus"
+module-name = "modelversus._rust"
+manifest-path = "rust/Cargo.toml"
