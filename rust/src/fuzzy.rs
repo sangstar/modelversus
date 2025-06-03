@@ -1,30 +1,11 @@
-struct LevMatrix {
-    n_rows: usize,
-    n_cols: usize,
-    data: Vec<i16>,
-}
+use crate::tokf1::token_f1_score;
+use crate::utils::{DPMatrix, Sequence};
 
-impl LevMatrix {
-    pub fn new(n_rows: usize, n_cols: usize) -> Self {
-        Self {
-            data: vec![0; n_rows * n_cols],
-            n_rows,
-            n_cols,
-        }
-    }
-    pub fn at(&self, i: usize, j: usize) -> i16 {
-        self.data[i * self.n_cols + j]
-    }
-    pub fn set(&mut self, i: usize, j: usize, val: i16) {
-        self.data[i * self.n_cols + j] = val;
-    }
-}
-
-fn edit_distance(pred_words_vec: Vec<&str>, gold_words_vec: Vec<&str>) -> i16 {
+fn edit_distance(pred_words_vec: &Vec<String>, gold_words_vec: &Vec<String>) -> i16 {
     let n_words_pred = pred_words_vec.len();
     let n_words_gold = gold_words_vec.len();
 
-    let mut dp = LevMatrix::new(n_words_pred + 1, n_words_gold + 1);
+    let mut dp = DPMatrix::new(n_words_pred + 1, n_words_gold + 1);
 
     // This part essentially does this:
     //     ""  s
@@ -67,25 +48,20 @@ fn edit_distance(pred_words_vec: Vec<&str>, gold_words_vec: Vec<&str>) -> i16 {
     dp.at(n_words_pred, n_words_gold)
 }
 
-fn fuzzy_match_score(pred: &str, gold: &str) -> f32 {
-    let pred_words_vec: Vec<&str> = pred.split_whitespace().collect();
-    let gold_words_vec: Vec<&str> = gold.split_whitespace().collect();
-    let mut normalizing_constant = pred_words_vec.len().max(gold_words_vec.len());
+pub fn fuzzy_match_score(pred: &Sequence, gold: &Sequence) -> f32 {
+    let mut normalizing_constant = pred.word_vector.len().max(gold.word_vector.len());
     if normalizing_constant == 0 {
         normalizing_constant = 1;
     }
 
-    let edit_distance = edit_distance(pred_words_vec, gold_words_vec) as f32;
+    let edit_distance = edit_distance(&pred.word_vector, &gold.word_vector) as f32;
     1.0 - (edit_distance / normalizing_constant as f32)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn str_to_word_vec(string: &str) -> Vec<&str> {
-        string.split_whitespace().collect()
-    }
+    use crate::utils::str_to_word_vec;
 
     #[test]
     fn test_levenshtein_distance_words() {
@@ -96,7 +72,7 @@ mod tests {
         // kitten → sitting      => substitution
         // "the" → (deleted)     => deletion
         // Total = 2
-        let distance = edit_distance(str_to_word_vec(pred), str_to_word_vec(gold));
+        let distance = edit_distance(&str_to_word_vec(pred), &str_to_word_vec(gold));
         assert_eq!(distance, 2);
     }
 
@@ -105,7 +81,7 @@ mod tests {
         let pred = "the quick brown fox";
         let gold = "the quick brown fox";
 
-        let distance = edit_distance(str_to_word_vec(pred), str_to_word_vec(gold));
+        let distance = edit_distance(&str_to_word_vec(pred), &str_to_word_vec(gold));
         assert_eq!(distance, 0);
     }
 
@@ -114,25 +90,34 @@ mod tests {
         let pred = "";
         let gold = "hello world";
 
-        let distance = edit_distance(str_to_word_vec(pred), str_to_word_vec(gold));
+        let distance = edit_distance(&str_to_word_vec(pred), &str_to_word_vec(gold));
         assert_eq!(distance, 2);
     }
 
     #[test]
     fn identical_strings() {
-        let score = fuzzy_match_score("the quick brown fox", "the quick brown fox");
+        let score = fuzzy_match_score(
+            &Sequence::new("the quick brown fox"),
+            &Sequence::new("the quick brown fox"),
+        );
         assert!((score - 1.0).abs() < 1e-6);
     }
 
     #[test]
     fn completely_different_strings() {
-        let score = fuzzy_match_score("cat dog mouse", "apple banana orange");
+        let score = fuzzy_match_score(
+            &Sequence::new("cat dog mouse"),
+            &Sequence::new("apple banana orange"),
+        );
         assert_eq!(score, 0.0);
     }
 
     #[test]
     fn single_substitution() {
-        let score = fuzzy_match_score("the quick brown fox", "the quick blue fox");
+        let score = fuzzy_match_score(
+            &Sequence::new("the quick brown fox"),
+            &Sequence::new("the quick blue fox"),
+        );
         // Only 1 word difference out of 4
         let expected = 1.0 - 1.0 / 4.0;
         assert!((score - expected).abs() < 1e-6);
@@ -140,7 +125,10 @@ mod tests {
 
     #[test]
     fn insertion_case() {
-        let score = fuzzy_match_score("quick brown fox", "the quick brown fox");
+        let score = fuzzy_match_score(
+            &Sequence::new("quick brown fox"),
+            &Sequence::new("the quick brown fox"),
+        );
         // 1 word inserted: "the"
         let expected = 1.0 - 1.0 / 4.0;
         assert!((score - expected).abs() < 1e-6);
@@ -148,7 +136,10 @@ mod tests {
 
     #[test]
     fn deletion_case() {
-        let score = fuzzy_match_score("the quick brown fox", "quick brown fox");
+        let score = fuzzy_match_score(
+            &Sequence::new("the quick brown fox"),
+            &Sequence::new("quick brown fox"),
+        );
         // 1 word deleted: "the"
         let expected = 1.0 - 1.0 / 4.0;
         assert!((score - expected).abs() < 1e-6);
@@ -156,22 +147,28 @@ mod tests {
 
     #[test]
     fn reordering_is_penalized() {
-        let score = fuzzy_match_score("the quick brown fox", "fox brown quick the");
+        let score = fuzzy_match_score(
+            &Sequence::new("the quick brown fox"),
+            &Sequence::new("fox brown quick the"),
+        );
         assert!(score == 0.0);
     }
 
     #[test]
     fn empty_vs_empty() {
-        let score = fuzzy_match_score("", "");
+        let score = fuzzy_match_score(&Sequence::new(""), &Sequence::new(""));
         assert_eq!(score, 1.0);
     }
 
     #[test]
     fn empty_vs_nonempty() {
-        let score = fuzzy_match_score("", "some non empty sentence");
+        let score = fuzzy_match_score(
+            &Sequence::new(""),
+            &Sequence::new("some non empty sentence"),
+        );
         assert_eq!(score, 0.0);
 
-        let score = fuzzy_match_score("hello", "");
+        let score = fuzzy_match_score(&Sequence::new("hello"), &Sequence::new(""));
         assert_eq!(score, 0.0);
     }
 }
