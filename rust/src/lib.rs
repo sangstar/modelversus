@@ -11,9 +11,9 @@ mod utils;
 // TODO: All pred and gold text here is presumed to be PRE-PROCESSED.
 //       ie lowercased, stemmed, with stopwords removed
 
-use pyo3::prelude::*;
-use crate::score::{PerformanceContext, get_results_from_batch};
+use crate::score::{get_results_from_batch, PerformanceContext};
 use crate::utils::Sequence;
+use pyo3::prelude::*;
 use tokio::runtime::Runtime;
 
 #[pyfunction]
