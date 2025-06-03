@@ -1,8 +1,29 @@
+use futures::future::join_all;
 use crate::bleu::bleu_score;
 use crate::fuzzy::fuzzy_match_score;
 use crate::rogue::rogue_l_score;
 use crate::tokf1::token_f1_score;
 use crate::utils::Sequence;
+
+pub async fn get_results_from_batch(pred_batch: Vec<String>, gold_batch: Vec<String>) -> Vec<f32> {
+    let mut results: Vec<PerformanceContext> = vec![];
+    let zipped_contents = pred_batch.into_iter().zip(gold_batch.into_iter());
+    for (pred, gold) in  zipped_contents {
+        results.push(
+            PerformanceContext::from_str(
+                pred, gold
+            )
+        );
+    }
+    let tasks = results
+        .into_iter()
+        .map(
+            |input| async move {
+                input.get_unified_score()
+            }
+        );
+    futures::future::join_all(tasks).await
+}
 
 type ScoreFn = fn(&Sequence, &Sequence) -> f32;
 const WEIGHTED_SCORE_FNS: &[(f32, ScoreFn)] =
@@ -27,6 +48,16 @@ impl PerformanceContext {
             scores: WEIGHTED_SCORE_FNS
         };
     }
+
+    pub fn from_str(pred: String, gold: String) -> Self {
+        let pred_seq = Sequence::new(pred.as_str());
+        let gold_seq = Sequence::new(gold.as_str());
+        return PerformanceContext {
+            pred: pred_seq,
+            gold: gold_seq,
+            scores: WEIGHTED_SCORE_FNS
+        };
+    }
     pub fn get_unified_score(&self) -> f32 {
         let mut raw_score = 0.0;
 
@@ -41,7 +72,7 @@ impl PerformanceContext {
 #[cfg(test)]
 mod tests {
     use crate::utils::Sequence;
-
+    use tokio::runtime::Runtime;
     use super::*;
 
     fn pc(pred: &str, gold: &str) -> PerformanceContext {
@@ -129,4 +160,28 @@ mod tests {
 
         assert!(s1 > s2 && s2 > s3 && s3 > s4, "Expected strict ranking");
     }
+
+    #[test]
+    fn test_batch_scorer() {
+        let preds = vec![
+            String::from("the cat sat"),
+            String::from("a dog barked"),
+        ];
+        let golds = vec![
+            String::from("the cat sat"),
+            String::from("the dog barked loudly"),
+        ];
+
+        let rt = Runtime::new().expect("Failed to create async runtime");
+        let scores = rt.block_on(get_results_from_batch(preds, golds));
+
+        assert_eq!(scores.len(), 2);
+        for s in scores {
+            println!("score: {}", s);
+            assert!(s >= 0.0 && s <= 1.0);
+        }
+    }
+
 }
+
+

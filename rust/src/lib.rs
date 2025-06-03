@@ -12,16 +12,20 @@ mod utils;
 //       ie lowercased, stemmed, with stopwords removed
 
 use pyo3::prelude::*;
+use crate::score::{PerformanceContext, get_results_from_batch};
+use crate::utils::Sequence;
+use tokio::runtime::Runtime;
 
-/// Dummy function; adds a and b and sets result as string
 #[pyfunction]
-fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
-    Ok((a + b).to_string())
+fn score_batch(preds: Vec<String>, golds: Vec<String>) -> PyResult<Vec<f32>> {
+    let rt = Runtime::new().expect("Failed to create async runtime");
+    let scores = rt.block_on(get_results_from_batch(preds, golds));
+
+    Ok(scores)
 }
 
-/// Dummy function for module scaffolding
 #[pymodule]
 fn _rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
+    m.add_function(wrap_pyfunction!(score_batch, m)?)?;
     Ok(())
 }
