@@ -5,12 +5,18 @@ use crate::tokf1::token_f1_score;
 use crate::utils::Sequence;
 
 type ScoreFn = fn(&Sequence, &Sequence) -> f32;
-const SCORERS: &[ScoreFn] = &[bleu_score, fuzzy_match_score, rogue_l_score, token_f1_score];
+const WEIGHTED_SCORE_FNS: &[(f32, ScoreFn)] =
+    &[
+        (1.0, bleu_score),
+        (1.0, fuzzy_match_score),
+        (1.0, rogue_l_score),
+        (1.0, token_f1_score)
+    ];
 
 pub struct PerformanceContext {
     pred: Sequence,
     gold: Sequence,
-    scores: &'static [ScoreFn],
+    scores: &'static [(f32, ScoreFn)],
 }
 
 impl PerformanceContext {
@@ -18,14 +24,16 @@ impl PerformanceContext {
         return PerformanceContext {
             pred,
             gold,
-            scores: SCORERS,
+            scores: WEIGHTED_SCORE_FNS
         };
     }
     pub fn get_unified_score(&self) -> f32 {
         let mut raw_score = 0.0;
-        for score in self.scores {
-            raw_score += score(&self.pred, &self.gold);
+
+        for &(scalar, score_fn) in self.scores {
+            raw_score += scalar * score_fn(&self.pred, &self.gold);
         }
+
         raw_score / self.scores.len() as f32
     }
 }
