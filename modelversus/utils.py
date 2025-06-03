@@ -67,6 +67,9 @@ def pre_process(text: str):
 
 # TODO: Have separate processes handle these two calculations
 #       concurrently
+
+# TODO: This is just for one model, will need to do these for model A and model B
+# TODO: Implement a bootstrapped A/B test eventually for even more confidence here
 def calculate_total_score(preds: Predictions, refs: References) -> list[float]:
     preds = [pre_process(text) for text in preds]
     refs = [pre_process(text) for text in refs]
