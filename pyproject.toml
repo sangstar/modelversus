@@ -15,4 +15,3 @@ dynamic = ["version"]
 [tool.maturin]
 python-source = "modelversus"
 module-name = "modelversus._rust"
-manifest-path = "rust/Cargo.toml"
