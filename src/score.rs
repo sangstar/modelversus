@@ -1,6 +1,6 @@
 use crate::bleu::bleu_score;
 use crate::fuzzy::fuzzy_match_score;
-use crate::rogue::rogue_l_score;
+use crate::rouge::rouge_l_score;
 use crate::tokf1::token_f1_score;
 use crate::utils::Sequence;
 use futures::future::join_all;
@@ -21,7 +21,7 @@ type ScoreFn = fn(&Sequence, &Sequence) -> f32;
 const WEIGHTED_SCORE_FNS: &[(f32, ScoreFn)] = &[
     (1.0, bleu_score),
     (1.0, fuzzy_match_score),
-    (1.0, rogue_l_score),
+    (1.0, rouge_l_score),
     (1.0, token_f1_score),
 ];
 

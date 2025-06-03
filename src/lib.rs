@@ -1,6 +1,6 @@
 mod bleu;
 mod fuzzy;
-mod rogue;
+mod rouge;
 mod score;
 mod tokf1;
 mod utils;

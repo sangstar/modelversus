@@ -70,6 +70,10 @@ def pre_process(text: str):
 
 # TODO: This is just for one model, will need to do these for model A and model B
 # TODO: Implement a bootstrapped A/B test eventually for even more confidence here
+# TODO: It may be pretty hazardous to call get_bert_scores(preds, refs) across many
+#       processes; may load the model in to memory multiple times unless it can be shared
+#       among the processes somehow (not sure how given the way processes have their own memory
+#       space), or if not could share among the threads, just keep in mind GIL may slow things down
 def calculate_total_score(preds: Predictions, refs: References) -> list[float]:
     preds = [pre_process(text) for text in preds]
     refs = [pre_process(text) for text in refs]

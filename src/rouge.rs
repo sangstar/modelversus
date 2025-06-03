@@ -35,7 +35,7 @@ fn get_lcs(pred: &Sequence, gold: &Sequence) -> usize {
     dp.at(pred.n_words, gold.n_words) as usize
 }
 
-pub fn rogue_l_score(pred: &Sequence, gold: &Sequence) -> f32 {
+pub fn rouge_l_score(pred: &Sequence, gold: &Sequence) -> f32 {
     let lcs_len = get_lcs(pred, gold) as f32;
     let pred_len = pred.n_words as f32;
     let gold_len = gold.n_words as f32;
@@ -95,28 +95,28 @@ mod tests {
     fn test_rouge_l_perfect_match() {
         let pred = sample("the cat sat");
         let gold = sample("the cat sat");
-        assert_eq!(rogue_l_score(&pred, &gold), 1.0);
+        assert_eq!(rouge_l_score(&pred, &gold), 1.0);
     }
 
     #[test]
     fn test_rouge_l_empty_pred() {
         let pred = sample("");
         let gold = sample("the cat sat");
-        assert_eq!(rogue_l_score(&pred, &gold), 0.0);
+        assert_eq!(rouge_l_score(&pred, &gold), 0.0);
     }
 
     #[test]
     fn test_rouge_l_empty_gold() {
         let pred = sample("the cat sat");
         let gold = sample("");
-        assert_eq!(rogue_l_score(&pred, &gold), 0.0);
+        assert_eq!(rouge_l_score(&pred, &gold), 0.0);
     }
 
     #[test]
     fn test_rouge_l_partial_match() {
         let pred = sample("quick brown fox");
         let gold = sample("the quick brown fox");
-        let score = rogue_l_score(&pred, &gold);
+        let score = rouge_l_score(&pred, &gold);
         assert!((score - 0.8571).abs() < 0.01); // LCS = 3, prec = 1.0, recall = 0.75 → F1 ≈ 0.857
     }
 
@@ -124,6 +124,6 @@ mod tests {
     fn test_rouge_l_no_match() {
         let pred = sample("cats eat cheese");
         let gold = sample("dogs chase balls");
-        assert_eq!(rogue_l_score(&pred, &gold), 0.0);
+        assert_eq!(rouge_l_score(&pred, &gold), 0.0);
     }
 }
