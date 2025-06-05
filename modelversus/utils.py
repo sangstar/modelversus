@@ -52,8 +52,6 @@ def save_bert_traced():
             outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
             return outputs.last_hidden_state  # [B, L, H]
 
-    # A bit janky to put so much arbitrary logic in __init__.py, but this is
-    # always meant to run on init, so...
     model = DebertaWrapper()
     model.eval()
 
