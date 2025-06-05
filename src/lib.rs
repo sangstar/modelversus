@@ -60,8 +60,6 @@ fn get_unified_score(
                 ),
             )
         });
-        dbg!(&result_1);
-        dbg!(&result_2);
         result_1
             .iter()
             .zip(result_2.iter())
