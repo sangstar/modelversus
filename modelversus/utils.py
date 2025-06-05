@@ -113,9 +113,6 @@ def calculate_total_score(preds, golds) -> list[float]:
     all_texts = preds + refs
     all_tok = tokenizer(all_texts, return_tensors="pt", padding=True, truncation=True)
 
-    # This padding will be to the longest sequence across both preds and refs
-    max_len = all_tok["input_ids"].shape[1]  # safe, efficient
-
     # Now split the batch back into preds and refs
     split = len(preds)
     pred_tok = {k: v[:split] for k, v in all_tok.items()}
