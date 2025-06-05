@@ -7,8 +7,9 @@ from datasets import Dataset
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from nltk.tokenize import word_tokenize
+from transformers import AutoTokenizer
 
-import modelversus
+BERT_MODEL = "microsoft/deberta-xlarge-mnli"
 
 # First-time setup
 nltk.download('punkt')
@@ -21,12 +22,6 @@ Predictions = list[Prediction]
 
 Reference = str
 References = list[Reference]
-
-
-# TODO: THE POINT OF THIS IS: All of these metrics in a vacuum kind of suck, but with a clever
-#       scoring function, we can filter only samples that are close to some threshold and present
-#       them to the user to judge
-
 
 @runtime_checkable
 class Model(Protocol):
@@ -43,6 +38,40 @@ class TaskContext:
     a: Challenger
     b: Challenger
     dataset: Dataset
+
+
+def save_bert_traced():
+    import torch
+    from transformers import AutoModel
+    class DebertaWrapper(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.model = AutoModel.from_pretrained(BERT_MODEL, output_hidden_states=True)
+
+        def forward(self, input_ids, attention_mask):
+            outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+            return outputs.last_hidden_state  # [B, L, H]
+
+    # A bit janky to put so much arbitrary logic in __init__.py, but this is
+    # always meant to run on init, so...
+    model = DebertaWrapper()
+    model.eval()
+
+    # Dummy input for tracing
+    tokenizer = AutoTokenizer.from_pretrained(BERT_MODEL)
+    inputs = tokenizer("hello world", return_tensors="pt")
+
+    # This attempts to make sure all parameters have grad disabled,
+    # but TorchScript seems very unwilling to ensure grad is disabled
+    # when tch loads it later
+    for p in model.parameters():
+        p.requires_grad_(False)
+
+    with torch.no_grad():
+        model = DebertaWrapper()
+        model.eval()
+        traced = torch.jit.trace(model, (inputs["input_ids"], inputs["attention_mask"]))
+        traced.save("deberta_trace.pt")
 
 
 def get_bert_scores(preds: Predictions, refs: References) -> Any:
@@ -65,23 +94,48 @@ def pre_process(text: str):
     return " ".join(stemmed)
 
 
-# TODO: Have separate processes handle these two calculations
-#       concurrently
-
 # TODO: This is just for one model, will need to do these for model A and model B
 # TODO: Implement a bootstrapped A/B test eventually for even more confidence here
 # TODO: It may be pretty hazardous to call get_bert_scores(preds, refs) across many
 #       processes; may load the model in to memory multiple times unless it can be shared
 #       among the processes somehow (not sure how given the way processes have their own memory
 #       space), or if not could share among the threads, just keep in mind GIL may slow things down
-def calculate_total_score(preds: Predictions, refs: References) -> list[float]:
-    preds = [pre_process(text) for text in preds]
-    refs = [pre_process(text) for text in refs]
-    print(preds, refs)
+def calculate_total_score(preds, golds) -> list[float]:
+    from modelversus import get_unified_score
+    from transformers import AutoTokenizer
 
-    bert_scores = get_bert_scores(preds, refs)
-    word_scores = modelversus.score_batch(preds, refs)
-    return [(2 * bert_score + word_score) for bert_score, word_score in zip(bert_scores, word_scores)]
+    tokenizer = AutoTokenizer.from_pretrained(BERT_MODEL)
+
+    pred_word_tokens = [pre_process(text) for text in preds]
+    gold_word_tokens = [pre_process(text) for text in golds]
+
+    # Combine and tokenize together
+    all_texts = preds + refs
+    all_tok = tokenizer(all_texts, return_tensors="pt", padding=True, truncation=True)
+
+    # This padding will be to the longest sequence across both preds and refs
+    max_len = all_tok["input_ids"].shape[1]  # safe, efficient
+
+    # Now split the batch back into preds and refs
+    split = len(preds)
+    pred_tok = {k: v[:split] for k, v in all_tok.items()}
+    gold_tok = {k: v[split:] for k, v in all_tok.items()}
+
+    pred_input_ids = pred_tok["input_ids"].numpy()
+    pred_attention_mask = pred_tok["attention_mask"].numpy()
+
+    gold_input_ids = gold_tok["input_ids"].numpy()
+    gold_attention_mask = gold_tok["attention_mask"].numpy()
+
+    scores = get_unified_score(
+        pred_word_tokens,
+        gold_word_tokens,
+        pred_input_ids,
+        pred_attention_mask,
+        gold_input_ids,
+        gold_attention_mask
+    )
+    print(scores)
 
 
 if __name__ == "__main__":
@@ -91,7 +145,7 @@ if __name__ == "__main__":
         "sat the cat on mat the",  # scrambled
         "the feline rested on the carpet",  # paraphrased
         "completely unrelated sentence",  # no overlap
-        "",  # empty prediction
+        "d",  # empty prediction
         "the quick brown fox",  # unrelated but plausible
         "he is eating an apple",  # plausible partial overlap
         "hello world",  # generic short

@@ -5,7 +5,7 @@ use crate::tokf1::token_f1_score;
 use crate::utils::Sequence;
 use futures::future::join_all;
 
-pub async fn get_results_from_batch(pred_batch: Vec<String>, gold_batch: Vec<String>) -> Vec<f32> {
+pub async fn get_results_from_batch(pred_batch: Vec<String>, gold_batch: Vec<String>) -> Vec<f64> {
     let mut results: Vec<PerformanceContext> = vec![];
     let zipped_contents = pred_batch.into_iter().zip(gold_batch.into_iter());
     for (pred, gold) in zipped_contents {
@@ -17,8 +17,8 @@ pub async fn get_results_from_batch(pred_batch: Vec<String>, gold_batch: Vec<Str
     futures::future::join_all(tasks).await
 }
 
-type ScoreFn = fn(&Sequence, &Sequence) -> f32;
-const WEIGHTED_SCORE_FNS: &[(f32, ScoreFn)] = &[
+type ScoreFn = fn(&Sequence, &Sequence) -> f64;
+const WEIGHTED_SCORE_FNS: &[(f64, ScoreFn)] = &[
     (1.0, bleu_score),
     (1.0, fuzzy_match_score),
     (1.0, rouge_l_score),
@@ -28,7 +28,7 @@ const WEIGHTED_SCORE_FNS: &[(f32, ScoreFn)] = &[
 pub struct PerformanceContext {
     pred: Sequence,
     gold: Sequence,
-    scores: &'static [(f32, ScoreFn)],
+    scores: &'static [(f64, ScoreFn)],
 }
 
 impl PerformanceContext {
@@ -49,14 +49,14 @@ impl PerformanceContext {
             scores: WEIGHTED_SCORE_FNS,
         };
     }
-    pub fn get_unified_score(&self) -> f32 {
+    pub fn get_unified_score(&self) -> f64 {
         let mut raw_score = 0.0;
 
         for &(scalar, score_fn) in self.scores {
             raw_score += scalar * score_fn(&self.pred, &self.gold);
         }
 
-        raw_score / self.scores.len() as f32
+        raw_score / self.scores.len() as f64
     }
 }
 
@@ -70,7 +70,7 @@ mod tests {
         PerformanceContext::new(Sequence::new(pred), Sequence::new(gold))
     }
 
-    fn close_enough(a: f32, b: f32, eps: f32) -> bool {
+    fn close_enough(a: f64, b: f64, eps: f64) -> bool {
         (a - b).abs() < eps
     }
 

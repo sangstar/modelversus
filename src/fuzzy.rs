@@ -48,14 +48,14 @@ fn edit_distance(pred_words_vec: &Vec<String>, gold_words_vec: &Vec<String>) -> 
     dp.at(n_words_pred, n_words_gold)
 }
 
-pub fn fuzzy_match_score(pred: &Sequence, gold: &Sequence) -> f32 {
+pub fn fuzzy_match_score(pred: &Sequence, gold: &Sequence) -> f64 {
     let mut normalizing_constant = pred.word_vector.len().max(gold.word_vector.len());
     if normalizing_constant == 0 {
         normalizing_constant = 1;
     }
 
-    let edit_distance = edit_distance(&pred.word_vector, &gold.word_vector) as f32;
-    1.0 - (edit_distance / normalizing_constant as f32)
+    let edit_distance = edit_distance(&pred.word_vector, &gold.word_vector) as f64;
+    1.0 - (edit_distance / normalizing_constant as f64)
 }
 
 #[cfg(test)]

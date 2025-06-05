@@ -41,7 +41,7 @@ fn calc_bleu_for_ngram(
     pred_word_vector: &Vec<String>,
     gold_word_vector: &Vec<String>,
     ngrams: usize,
-) -> f32 {
+) -> f64 {
     let pred_ngrams_vec = get_ngrams_from_word_vec(pred_word_vector, ngrams);
     let gold_ngrams_vec = get_ngrams_from_word_vec(gold_word_vector, ngrams);
 
@@ -53,20 +53,20 @@ fn calc_bleu_for_ngram(
     let pred_ngrams_counts = get_ngram_counts(&pred_ngrams_vec);
     let gold_ngrams_counts = get_ngram_counts(&gold_ngrams_vec);
 
-    let matches = get_matches_clipped(&pred_ngrams_counts, &gold_ngrams_counts) as f32;
-    matches / total_pred_ngrams_count as f32
+    let matches = get_matches_clipped(&pred_ngrams_counts, &gold_ngrams_counts) as f64;
+    matches / total_pred_ngrams_count as f64
 }
 
-fn geometric_mean(values: &Vec<f32>) -> f32 {
+fn geometric_mean(values: &Vec<f64>) -> f64 {
     if values.is_empty() || values.iter().any(|&v| v == 0.0) {
         return 0.0;
     }
 
-    let log_sum: f32 = values.iter().map(|v| v.ln()).sum();
-    (log_sum / values.len() as f32).exp()
+    let log_sum: f64 = values.iter().map(|v| v.ln()).sum();
+    (log_sum / values.len() as f64).exp()
 }
 
-pub fn bleu_score(pred: &Sequence, gold: &Sequence) -> f32 {
+pub fn bleu_score(pred: &Sequence, gold: &Sequence) -> f64 {
     let pred_word_vector_len = pred.word_vector.len();
     let gold_word_vector_len = gold.word_vector.len();
 
@@ -76,19 +76,19 @@ pub fn bleu_score(pred: &Sequence, gold: &Sequence) -> f32 {
         .min(pred.word_vector.len())
         .min(gold.word_vector.len());
 
-    let mut bleu_scores: Vec<f32> = vec![];
+    let mut bleu_scores: Vec<f64> = vec![];
     for i in 1..=max_ngrams {
         bleu_scores.push(calc_bleu_for_ngram(&pred.word_vector, &gold.word_vector, i))
     }
     let mean = geometric_mean(&bleu_scores);
 
-    let brevity_penalty: f32;
+    let brevity_penalty: f64;
 
     if pred_word_vector_len > gold_word_vector_len {
         brevity_penalty = 1.0
     } else {
-        let brevity_penalty_arg: f32 =
-            1.0 - (gold.word_vector.len() as f32 / pred.word_vector.len() as f32);
+        let brevity_penalty_arg: f64 =
+            1.0 - (gold.word_vector.len() as f64 / pred.word_vector.len() as f64);
         brevity_penalty = brevity_penalty_arg.exp();
     }
 

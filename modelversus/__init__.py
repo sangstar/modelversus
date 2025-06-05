@@ -4,8 +4,8 @@ except ModuleNotFoundError:
     # For some reason maturin may insist on placing
     # .so files in their own dirs in site_packages/
     # for MacOS users, so try this in case
-    from _rust import _rust
+    import _rust
 
-from _rust import score_batch
+from _rust import score_batch, get_unified_score
 
 __all__ = [score_batch]

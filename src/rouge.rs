@@ -35,10 +35,10 @@ fn get_lcs(pred: &Sequence, gold: &Sequence) -> usize {
     dp.at(pred.n_words, gold.n_words) as usize
 }
 
-pub fn rouge_l_score(pred: &Sequence, gold: &Sequence) -> f32 {
-    let lcs_len = get_lcs(pred, gold) as f32;
-    let pred_len = pred.n_words as f32;
-    let gold_len = gold.n_words as f32;
+pub fn rouge_l_score(pred: &Sequence, gold: &Sequence) -> f64 {
+    let lcs_len = get_lcs(pred, gold) as f64;
+    let pred_len = pred.n_words as f64;
+    let gold_len = gold.n_words as f64;
 
     if pred_len == 0.0 || gold_len == 0.0 {
         return 0.0;

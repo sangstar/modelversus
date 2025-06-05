@@ -5,7 +5,7 @@ use std::collections::HashSet;
 // Reference: "the quick brown fox"
 // Prediction: "fox quick the brown"
 // Are a perfect score just because they have the same overlap
-pub fn token_f1_score(pred: &Sequence, gold: &Sequence) -> f32 {
+pub fn token_f1_score(pred: &Sequence, gold: &Sequence) -> f64 {
     let pred_set: HashSet<&str> = pred.text.split_whitespace().collect();
     let gold_set: HashSet<&str> = gold.text.split_whitespace().collect();
 
@@ -20,10 +20,10 @@ pub fn token_f1_score(pred: &Sequence, gold: &Sequence) -> f32 {
         return 1.0;
     }
 
-    let num_common = gold_set.intersection(&pred_set).count() as f32;
+    let num_common = gold_set.intersection(&pred_set).count() as f64;
 
-    let precision: f32 = num_common / pred_set.len() as f32;
-    let recall: f32 = num_common / gold_set.len() as f32;
+    let precision: f64 = num_common / pred_set.len() as f64;
+    let recall: f64 = num_common / gold_set.len() as f64;
     if precision + recall == 0.0 {
         0.0
     } else {
