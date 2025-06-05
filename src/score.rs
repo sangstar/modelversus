@@ -3,9 +3,8 @@ use crate::fuzzy::fuzzy_match_score;
 use crate::rouge::rouge_l_score;
 use crate::tokf1::token_f1_score;
 use crate::utils::Sequence;
-use futures::future::join_all;
 
-pub async fn get_results_from_batch(pred_batch: Vec<String>, gold_batch: Vec<String>) -> Vec<f64> {
+pub async fn get_word_vec_ops_score(pred_batch: Vec<String>, gold_batch: Vec<String>) -> Vec<f64> {
     let mut results: Vec<PerformanceContext> = vec![];
     let zipped_contents = pred_batch.into_iter().zip(gold_batch.into_iter());
     for (pred, gold) in zipped_contents {
@@ -161,7 +160,7 @@ mod tests {
         ];
 
         let rt = Runtime::new().expect("Failed to create async runtime");
-        let scores = rt.block_on(get_results_from_batch(preds, golds));
+        let scores = rt.block_on(get_word_vec_ops_score(preds, golds));
 
         assert_eq!(scores.len(), 2);
         for s in scores {
