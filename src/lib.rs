@@ -69,6 +69,7 @@ fn get_unified_score(
     let gold_attn_mask = gold_attention_mask.as_array().to_owned();
 
     let scores = py.allow_threads(|| {
+        // TODO: Don't make a new runtime each call; expensive
         let rt = Runtime::new().expect("Failed to create async runtime");
         let (result_1, result_2) = rt.block_on(async {
             join!(
